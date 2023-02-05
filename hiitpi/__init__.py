@@ -120,75 +120,12 @@ def create_app(config_name):
         return None
 
     @app.callback(
-        Output("leaderboard-graph", "figure"),
-        [Input("update-leaderboard-btn", "n_clicks")],
-        [State("workout-dropdown", "value")],
-    )
+            Output("leaderboard-graph", "figure"),
+            [Input("update-leaderboard-btn", "n_clicks")],
+            [State("workout-dropdown", "value")],
+        )
     def update_leaderboard_graph(n_clicks, workout):
-        if n_clicks > 0:
-            current_time = datetime.datetime.utcnow()
-            a_week_ago = current_time - datetime.timedelta(weeks=1)
-
-            query = db.session.query(
-                WorkoutSession.user_name,
-                WorkoutSession.workout,
-                db.func.sum(WorkoutSession.reps).label("reps"),
-            ).filter(WorkoutSession.created_date >= a_week_ago)
-
-            if workout is not None:
-                query = query.filter_by(workout=workout)
-
-            query = (
-                query.group_by(WorkoutSession.user_name, WorkoutSession.workout)
-                .order_by(db.func.sum(WorkoutSession.reps).desc())
-                .all()
-            )
-
-            df = pd.DataFrame(query, columns=["user_name", "workout", "reps"])
-            layout = {
-                "barmode": "stack",
-                "margin": {"l": 0, "r": 0, "b": 0, "t": 40},
-                "autosize": True,
-                "font": {"family": "Comfortaa", "color": COLORS["text"], "size": 10,},
-                "plot_bgcolor": COLORS["graph_bg"],
-                "paper_bgcolor": COLORS["graph_bg"],
-                "xaxis": {
-                    "ticks": "",
-                    "showgrid": False,
-                    "title": "",
-                    "automargin": True,
-                    "zeroline": False,
-                },
-                "yaxis": {
-                    "showgrid": False,
-                    "title": "",
-                    "automargin": True,
-                    "categoryorder": "total ascending",
-                    "linewidth": 1,
-                    "linecolor": "#282828",
-                    "zeroline": False,
-                },
-                "title": {
-                    "text": "Last 7 Days",
-                    "y": 0.9,
-                    "x": 0.5,
-                    "xanchor": "center",
-                    "yanchor": "top",
-                },
-                "showlegend": False,
-            }
-            fig = px.bar(
-                df,
-                x="reps",
-                y="user_name",
-                color="workout",
-                orientation="h",
-                color_discrete_sequence=px.colors.qualitative.Plotly,
-            )
-            fig.update_layout(layout)
-            fig.update_traces(marker_line_width=0, width=0.5)
-            return fig
-        else:
+        if n_clicks <= 0:
             return {
                 "data": [],
                 "layout": {
@@ -208,6 +145,69 @@ def create_app(config_name):
                     },
                 },
             }
+
+        current_time = datetime.datetime.utcnow()
+        a_week_ago = current_time - datetime.timedelta(weeks=1)
+
+        query = db.session.query(
+            WorkoutSession.user_name,
+            WorkoutSession.workout,
+            db.func.sum(WorkoutSession.reps).label("reps"),
+        ).filter(WorkoutSession.created_date >= a_week_ago)
+
+        if workout is not None:
+            query = query.filter_by(workout=workout)
+
+        query = (
+            query.group_by(WorkoutSession.user_name, WorkoutSession.workout)
+            .order_by(db.func.sum(WorkoutSession.reps).desc())
+            .all()
+        )
+
+        df = pd.DataFrame(query, columns=["user_name", "workout", "reps"])
+        layout = {
+            "barmode": "stack",
+            "margin": {"l": 0, "r": 0, "b": 0, "t": 40},
+            "autosize": True,
+            "font": {"family": "Comfortaa", "color": COLORS["text"], "size": 10,},
+            "plot_bgcolor": COLORS["graph_bg"],
+            "paper_bgcolor": COLORS["graph_bg"],
+            "xaxis": {
+                "ticks": "",
+                "showgrid": False,
+                "title": "",
+                "automargin": True,
+                "zeroline": False,
+            },
+            "yaxis": {
+                "showgrid": False,
+                "title": "",
+                "automargin": True,
+                "categoryorder": "total ascending",
+                "linewidth": 1,
+                "linecolor": "#282828",
+                "zeroline": False,
+            },
+            "title": {
+                "text": "Last 7 Days",
+                "y": 0.9,
+                "x": 0.5,
+                "xanchor": "center",
+                "yanchor": "top",
+            },
+            "showlegend": False,
+        }
+        fig = px.bar(
+            df,
+            x="reps",
+            y="user_name",
+            color="workout",
+            orientation="h",
+            color_discrete_sequence=px.colors.qualitative.Plotly,
+        )
+        fig.update_layout(layout)
+        fig.update_traces(marker_line_width=0, width=0.5)
+        return fig
 
     @server.route("/videostream/<workout>", methods=["GET"])
     def videiostream(workout):

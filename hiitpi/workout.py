@@ -30,7 +30,7 @@ class Edge:
         self.score = min(self.k_a.score, self.k_b.score)
 
     def __repr__(self):
-        return "Edge({} -> {}, {})".format(self.k_a.k, self.k_b.k, self.vec)
+        return f"Edge({self.k_a.k} -> {self.k_b.k}, {self.vec})"
 
     def __invert__(self):
         return Edge(self.k_b, self.k_a)
@@ -51,7 +51,7 @@ class Joint:
         self.angle = self.e_a.find_angle(self.e_b)
 
     def __repr__(self):
-        return "Joint({}, {}, {})".format(self.e_a, self.e_b, self.angle)
+        return f"Joint({self.e_a}, {self.e_b}, {self.angle})"
 
 
 class Workout:
@@ -118,38 +118,34 @@ class ToeTap(Workout):
     def get_stats(self, pose):
         kps = pose.keypoints
 
-        if all(kps[k].score > self.THRESHOLD for k in self.KEYPOINTS):
-
-            e_hips = Edge(kps["left hip"], kps["right hip"])
-            e_ankles = Edge(kps["left ankle"], kps["right ankle"])
-            e_lelbow_lshoulder = Edge(kps["left elbow"], kps["left shoulder"])
-            e_lelbow_lwrist = Edge(kps["left elbow"], kps["left wrist"])
-            e_relbow_rshoulder = Edge(kps["right elbow"], kps["right shoulder"])
-            e_relbow_rwrist = Edge(kps["right elbow"], kps["right wrist"])
-
-            j_lelbow = Joint(e_lelbow_lshoulder, e_lelbow_lwrist)
-            j_relbow = Joint(e_relbow_rshoulder, e_relbow_rwrist)
-
-            return {
-                "e_hips_norm": e_hips.norm,
-                "e_ankles_norm": e_ankles.norm,
-                "j_lelbow_angle": j_lelbow.angle,
-                "j_relbow_angle": j_relbow.angle,
-            }
-        else:
+        if any(kps[k].score <= self.THRESHOLD for k in self.KEYPOINTS):
             return None
+        e_hips = Edge(kps["left hip"], kps["right hip"])
+        e_ankles = Edge(kps["left ankle"], kps["right ankle"])
+        e_lelbow_lshoulder = Edge(kps["left elbow"], kps["left shoulder"])
+        e_lelbow_lwrist = Edge(kps["left elbow"], kps["left wrist"])
+        e_relbow_rshoulder = Edge(kps["right elbow"], kps["right shoulder"])
+        e_relbow_rwrist = Edge(kps["right elbow"], kps["right wrist"])
+
+        j_lelbow = Joint(e_lelbow_lshoulder, e_lelbow_lwrist)
+        j_relbow = Joint(e_relbow_rshoulder, e_relbow_rwrist)
+
+        return {
+            "e_hips_norm": e_hips.norm,
+            "e_ankles_norm": e_ankles.norm,
+            "j_lelbow_angle": j_lelbow.angle,
+            "j_relbow_angle": j_relbow.angle,
+        }
 
     def get_state(self, stats):
-        if stats is not None:
-            if stats["e_ankles_norm"] <= stats["e_hips_norm"]:
-                if stats["j_lelbow_angle"] >= 90 and stats["j_relbow_angle"] <= 90:
-                    return 1
-                elif stats["j_relbow_angle"] >= 90 and stats["j_lelbow_angle"] <= 90:
-                    return 2
-                else:
-                    return 0
-            else:
-                return 0
+        if stats is None:
+            return 0
+        if stats["e_ankles_norm"] > stats["e_hips_norm"]:
+            return 0
+        if stats["j_lelbow_angle"] >= 90 and stats["j_relbow_angle"] <= 90:
+            return 1
+        elif stats["j_relbow_angle"] >= 90 and stats["j_lelbow_angle"] <= 90:
+            return 2
         else:
             return 0
 
@@ -173,43 +169,40 @@ class JumpingJacks(Workout):
     def get_stats(self, pose):
         kps = pose.keypoints
 
-        if all(kps[k].score > self.THRESHOLD for k in self.KEYPOINTS):
-
-            e_hips = Edge(kps["left hip"], kps["right hip"])
-            e_ankles = Edge(kps["left ankle"], kps["right ankle"])
-            e_lshoulder_lelbow = Edge(kps["left shoulder"], kps["left elbow"])
-            e_lshoulder_lhip = Edge(kps["left shoulder"], kps["left hip"])
-            e_rshoulder_relbow = Edge(kps["right shoulder"], kps["right elbow"])
-            e_rshoulder_rhip = Edge(kps["right shoulder"], kps["right hip"])
-
-            j_lshoulder = Joint(e_lshoulder_lelbow, e_lshoulder_lhip)
-            j_rshoulder = Joint(e_rshoulder_relbow, e_rshoulder_rhip)
-
-            return {
-                "e_hips_norm": e_hips.norm,
-                "e_ankles_norm": e_ankles.norm,
-                "j_lshoulder_angle": j_lshoulder.angle,
-                "j_rshoulder_angle": j_rshoulder.angle,
-            }
-        else:
+        if any(kps[k].score <= self.THRESHOLD for k in self.KEYPOINTS):
             return None
+        e_hips = Edge(kps["left hip"], kps["right hip"])
+        e_ankles = Edge(kps["left ankle"], kps["right ankle"])
+        e_lshoulder_lelbow = Edge(kps["left shoulder"], kps["left elbow"])
+        e_lshoulder_lhip = Edge(kps["left shoulder"], kps["left hip"])
+        e_rshoulder_relbow = Edge(kps["right shoulder"], kps["right elbow"])
+        e_rshoulder_rhip = Edge(kps["right shoulder"], kps["right hip"])
+
+        j_lshoulder = Joint(e_lshoulder_lelbow, e_lshoulder_lhip)
+        j_rshoulder = Joint(e_rshoulder_relbow, e_rshoulder_rhip)
+
+        return {
+            "e_hips_norm": e_hips.norm,
+            "e_ankles_norm": e_ankles.norm,
+            "j_lshoulder_angle": j_lshoulder.angle,
+            "j_rshoulder_angle": j_rshoulder.angle,
+        }
 
     def get_state(self, stats):
-        if stats is not None:
-            if (
-                stats["e_ankles_norm"] <= stats["e_hips_norm"]
-                and stats["j_lshoulder_angle"] <= 30
-                and stats["j_rshoulder_angle"] <= 30
-            ):
-                return 1
-            elif (
-                stats["e_ankles_norm"] >= stats["e_hips_norm"] * 1.5
-                and stats["j_lshoulder_angle"] >= 110
-                and stats["j_rshoulder_angle"] >= 110
-            ):
-                return 2
-            else:
-                return 0
+        if stats is None:
+            return 0
+        if (
+            stats["e_ankles_norm"] <= stats["e_hips_norm"]
+            and stats["j_lshoulder_angle"] <= 30
+            and stats["j_rshoulder_angle"] <= 30
+        ):
+            return 1
+        elif (
+            stats["e_ankles_norm"] >= stats["e_hips_norm"] * 1.5
+            and stats["j_lshoulder_angle"] >= 110
+            and stats["j_rshoulder_angle"] >= 110
+        ):
+            return 2
         else:
             return 0
 
@@ -231,46 +224,43 @@ class PushUp(Workout):
     def get_stats(self, pose):
         kps = pose.keypoints
 
-        if all(kps[k].score > self.THRESHOLD for k in self.KEYPOINTS):
-
-            e_lelbow_lshoulder = Edge(kps["left elbow"], kps["left shoulder"])
-            e_lelbow_lwrist = Edge(kps["left elbow"], kps["left wrist"])
-            e_relbow_rshoulder = Edge(kps["right elbow"], kps["right shoulder"])
-            e_relbow_rwrist = Edge(kps["right elbow"], kps["right wrist"])
-            e_lshoulder_rshoulder = Edge(kps["left shoulder"], kps["right shoulder"])
-
-            j_lelbow = Joint(e_lelbow_lshoulder, e_lelbow_lwrist)
-            j_relbow = Joint(e_relbow_rshoulder, e_relbow_rwrist)
-            j_lshoulder = Joint(e_lshoulder_rshoulder, ~e_lelbow_lshoulder)
-            j_rshoulder = Joint(~e_lshoulder_rshoulder, ~e_relbow_rshoulder)
-
-            return {
-                "j_lelbow_angle": j_lelbow.angle,
-                "j_relbow_angle": j_relbow.angle,
-                "j_lshoulder_angle": j_lshoulder.angle,
-                "j_rshoulder_angle": j_rshoulder.angle,
-            }
-        else:
+        if any(kps[k].score <= self.THRESHOLD for k in self.KEYPOINTS):
             return None
+        e_lelbow_lshoulder = Edge(kps["left elbow"], kps["left shoulder"])
+        e_lelbow_lwrist = Edge(kps["left elbow"], kps["left wrist"])
+        e_relbow_rshoulder = Edge(kps["right elbow"], kps["right shoulder"])
+        e_relbow_rwrist = Edge(kps["right elbow"], kps["right wrist"])
+        e_lshoulder_rshoulder = Edge(kps["left shoulder"], kps["right shoulder"])
+
+        j_lelbow = Joint(e_lelbow_lshoulder, e_lelbow_lwrist)
+        j_relbow = Joint(e_relbow_rshoulder, e_relbow_rwrist)
+        j_lshoulder = Joint(e_lshoulder_rshoulder, ~e_lelbow_lshoulder)
+        j_rshoulder = Joint(~e_lshoulder_rshoulder, ~e_relbow_rshoulder)
+
+        return {
+            "j_lelbow_angle": j_lelbow.angle,
+            "j_relbow_angle": j_relbow.angle,
+            "j_lshoulder_angle": j_lshoulder.angle,
+            "j_rshoulder_angle": j_rshoulder.angle,
+        }
 
     def get_state(self, stats):
-        if stats is not None:
-            if (
-                stats["j_lelbow_angle"] >= 150
-                and stats["j_relbow_angle"] >= 150
-                and stats["j_lshoulder_angle"] <= 120
-                and stats["j_rshoulder_angle"] <= 120
-            ):
-                return 1
-            elif (
-                stats["j_lelbow_angle"] <= 100
-                and stats["j_relbow_angle"] <= 100
-                and stats["j_lshoulder_angle"] >= 150
-                and stats["j_rshoulder_angle"] >= 150
-            ):
-                return 2
-            else:
-                return 0
+        if stats is None:
+            return 0
+        if (
+            stats["j_lelbow_angle"] >= 150
+            and stats["j_relbow_angle"] >= 150
+            and stats["j_lshoulder_angle"] <= 120
+            and stats["j_rshoulder_angle"] <= 120
+        ):
+            return 1
+        elif (
+            stats["j_lelbow_angle"] <= 100
+            and stats["j_relbow_angle"] <= 100
+            and stats["j_lshoulder_angle"] >= 150
+            and stats["j_rshoulder_angle"] >= 150
+        ):
+            return 2
         else:
             return 0
 
@@ -298,55 +288,52 @@ class SideSquatJump(Workout):
     def get_stats(self, pose):
         kps = pose.keypoints
 
-        if all(kps[k].score > self.THRESHOLD for k in self.KEYPOINTS):
-
-            e_lelbow_lshoulder = Edge(kps["left elbow"], kps["left shoulder"])
-            e_lelbow_lwrist = Edge(kps["left elbow"], kps["left wrist"])
-            e_relbow_rshoulder = Edge(kps["right elbow"], kps["right shoulder"])
-            e_relbow_rwrist = Edge(kps["right elbow"], kps["right wrist"])
-
-            e_lshoulder_rshoulder = Edge(kps["left shoulder"], kps["right shoulder"])
-            e_lwrist_rwrist = Edge(kps["left wrist"], kps["right wrist"])
-
-            e_hips = Edge(kps["left hip"], kps["right hip"])
-            e_ankles = Edge(kps["left ankle"], kps["right ankle"])
-
-            j_lelbow = Joint(e_lelbow_lshoulder, e_lelbow_lwrist)
-            j_relbow = Joint(e_relbow_rshoulder, e_relbow_rwrist)
-
-            return {
-                "e_shoulders_norm": e_lshoulder_rshoulder.norm,
-                "e_wrists_norm": e_lwrist_rwrist.norm,
-                "e_hips_norm": e_hips.norm,
-                "e_ankles_norm": e_ankles.norm,
-                "j_lelbow_angle": j_lelbow.angle,
-                "j_relbow_angle": j_relbow.angle,
-            }
-        else:
+        if any(kps[k].score <= self.THRESHOLD for k in self.KEYPOINTS):
             return None
+        e_lelbow_lshoulder = Edge(kps["left elbow"], kps["left shoulder"])
+        e_lelbow_lwrist = Edge(kps["left elbow"], kps["left wrist"])
+        e_relbow_rshoulder = Edge(kps["right elbow"], kps["right shoulder"])
+        e_relbow_rwrist = Edge(kps["right elbow"], kps["right wrist"])
+
+        e_lshoulder_rshoulder = Edge(kps["left shoulder"], kps["right shoulder"])
+        e_lwrist_rwrist = Edge(kps["left wrist"], kps["right wrist"])
+
+        e_hips = Edge(kps["left hip"], kps["right hip"])
+        e_ankles = Edge(kps["left ankle"], kps["right ankle"])
+
+        j_lelbow = Joint(e_lelbow_lshoulder, e_lelbow_lwrist)
+        j_relbow = Joint(e_relbow_rshoulder, e_relbow_rwrist)
+
+        return {
+            "e_shoulders_norm": e_lshoulder_rshoulder.norm,
+            "e_wrists_norm": e_lwrist_rwrist.norm,
+            "e_hips_norm": e_hips.norm,
+            "e_ankles_norm": e_ankles.norm,
+            "j_lelbow_angle": j_lelbow.angle,
+            "j_relbow_angle": j_relbow.angle,
+        }
 
     def get_state(self, stats):
-        if stats is not None:
-            if (
-                stats["e_wrists_norm"] <= stats["e_shoulders_norm"]
-                and stats["j_lelbow_angle"] <= 90
-                and stats["j_relbow_angle"] <= 90
-            ):
-                if stats["e_ankles_norm"] <= stats["e_hips_norm"] * 1.5:
-                    return 1
-                elif stats["e_ankles_norm"] >= stats["e_hips_norm"] * 2.0:
-                    return 2
-                else:
-                    return 0
-            elif (
-                stats["e_wrists_norm"] >= stats["e_shoulders_norm"]
-                and stats["e_ankles_norm"] <= stats["e_hips_norm"] * 1.5
-                and stats["j_lelbow_angle"] >= 150
-                and stats["j_relbow_angle"] >= 150
-            ):
-                return 3
+        if stats is None:
+            return 0
+        if (
+            stats["e_wrists_norm"] <= stats["e_shoulders_norm"]
+            and stats["j_lelbow_angle"] <= 90
+            and stats["j_relbow_angle"] <= 90
+        ):
+            if stats["e_ankles_norm"] <= stats["e_hips_norm"] * 1.5:
+                return 1
+            elif stats["e_ankles_norm"] >= stats["e_hips_norm"] * 2.0:
+                return 2
             else:
                 return 0
+        elif (
+            stats["e_wrists_norm"] >= stats["e_shoulders_norm"]
+            and stats["e_ankles_norm"] <= stats["e_hips_norm"] * 1.5
+            and stats["j_lelbow_angle"] >= 150
+            and stats["j_relbow_angle"] >= 150
+        ):
+            return 3
         else:
             return 0
 

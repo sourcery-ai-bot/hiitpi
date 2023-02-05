@@ -66,9 +66,7 @@ class VideoStream(object):
         self.camera.zoom = zoom
         self.camera.exposure_compensation = ev
         logger.info(
-            "PiCamera: resolution={} framerate={}".format(
-                self.camera.resolution, self.camera.framerate
-            )
+            f"PiCamera: resolution={self.camera.resolution} framerate={self.camera.framerate}"
         )
 
     def start(self, model):
